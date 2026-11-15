@@ -1,0 +1,121 @@
+class CsvTable {
+    var headers string[] = []
+    var rows string[][] = []
+
+    # Names match exactly; -1 means the column does not exist.
+    func column_index(name string) int64 {
+        for header, index in headers {
+            if header == name {
+                return index
+            }
+        }
+        return -1
+    }
+
+    func validate() string {
+        if headers.is_empty() {
+            return "CSV needs at least one header"
+        }
+        local var seen dictionary[string, bool] = []
+        for header in headers {
+            if header.trim() == "" {
+                return "CSV headers must not be empty or whitespace-only"
+            }
+            if seen.contains(header) {
+                return "Duplicate CSV header: " + header
+            }
+            seen[header] = true
+        }
+        for row, index in rows {
+            if row.length != headers.length {
+                return "CSV data row " + (index + 1) + " has " + row.length + " fields; expected " + headers.length
+            }
+        }
+        return ""
+    }
+}
+
+class CsvTableResult {
+    var table CsvTable = null
+    var error string = ""
+}
+
+class CsvTextResult {
+    var text string = ""
+    var error string = ""
+}
+
+func csv_from_rows(headers string[], rows string[][]) CsvTableResult {
+    local var table CsvTable = CsvTable.new(
+        headers: headers.duplicate()
+        rows: rows.duplicate_deep()
+    )
+    local var error string = table.validate()
+    if error != "" {
+        return CsvTableResult.new(error: error)
+    }
+    return CsvTableResult.new(table: table)
+}
+
+func csv_parse(text string) CsvTableResult {
+    local var records string[][] = CSV.parse(text)
+    if records.is_empty() {
+        return CsvTableResult.new(error: "CSV needs a header row")
+    }
+    # CSV.parse owns these arrays, so no additional copy is needed here.
+    local var headers string[] = records[0]
+    records.remove_at(0)
+    local var table CsvTable = CsvTable.new(headers: headers rows: records)
+    local var error string = table.validate()
+    if error != "" {
+        return CsvTableResult.new(error: error)
+    }
+    return CsvTableResult.new(table: table)
+}
+
+func csv_read(filename string) CsvTableResult {
+    return csv_parse(file.read(filename))
+}
+
+func csv_stringify(table CsvTable) CsvTextResult {
+    if table == null {
+        return CsvTextResult.new(error: "CSV table must not be null")
+    }
+    local var error string = table.validate()
+    if error != "" {
+        return CsvTextResult.new(error: error)
+    }
+    if table.headers.length == 1 {
+        # A lone empty field must be quoted: other CSV readers skip blank lines.
+        # Sarlin literals have no escapes; two empty records produce a line break.
+        local var empty_records string[][] = [[""], [""]]
+        local var line_break string = CSV.stringify(empty_records)
+        local var header_record string[][] = [table.headers]
+        local var text string = CSV.stringify(header_record)
+        for row in table.rows {
+            local var record string[][] = [row]
+            local var field string = CSV.stringify(record)
+            if row[0] == "" {
+                field = JSON.stringify("")
+            }
+            text = text + line_break + field
+        }
+        return CsvTextResult.new(text: text)
+    }
+    local var records string[][] = []
+    records.add(table.headers)
+    for row in table.rows {
+        records.add(row)
+    }
+    return CsvTextResult.new(text: CSV.stringify(records))
+}
+
+# Validate before opening the file so invalid tables cannot replace existing data.
+func csv_write(filename string, table CsvTable) string {
+    local var encoded CsvTextResult = csv_stringify(table)
+    if encoded.error != "" {
+        return encoded.error
+    }
+    file.write(filename, encoded.text)
+    return ""
+}

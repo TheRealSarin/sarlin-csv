@@ -1,0 +1,25 @@
+func main() {
+    local var headers string[] = ["name", "score", "note"]
+    local var rows string[][] = [
+        ["Alice", "1200", "London, UK"],
+        ["Bob", "850", ""]
+    ]
+    local var result CsvTableResult = csv_from_rows(headers, rows)
+    if result.error != "" {
+        print(result.error)
+        return
+    }
+
+    local var table CsvTable = result.table
+    local var score_column int64 = table.column_index("score")
+    for row in table.rows {
+        print(row[0] + ": " + row[score_column])
+    }
+
+    local var encoded CsvTextResult = csv_stringify(table)
+    if encoded.error != "" {
+        print(encoded.error)
+        return
+    }
+    print(encoded.text)
+}

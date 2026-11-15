@@ -1,0 +1,90 @@
+func csv_test_expect(condition bool, label string) {
+    if not condition {
+        print("FAIL: " + label)
+    }
+}
+
+func main() {
+    for case_name in directory.list("cases") {
+        local var folder string = path.join("cases", case_name)
+        local var expected string[][] = JSON.parse(file.read(path.join(folder, "expected.json")))
+        local var result CsvTableResult = csv_read(path.join(folder, "input.csv"))
+        csv_test_expect(result.error == "", case_name + " parse")
+        if result.table == null {
+            continue
+        }
+        local var table CsvTable = result.table
+        csv_test_expect(table.headers == expected[0], case_name + " headers")
+        expected.remove_at(0)
+        csv_test_expect(table.rows == expected, case_name + " rows")
+        csv_test_expect(table.column_index(table.headers[0]) == 0, case_name + " first column")
+        csv_test_expect(table.column_index("missing column") == -1, case_name + " absent column")
+
+        local var encoded CsvTextResult = csv_stringify(table)
+        csv_test_expect(encoded.error == "", case_name + " stringify")
+        local var decoded CsvTableResult = csv_parse(encoded.text)
+        csv_test_expect(decoded.error == "", case_name + " round trip")
+        if decoded.table != null {
+            csv_test_expect(decoded.table.headers == table.headers, case_name + " round trip headers")
+            csv_test_expect(decoded.table.rows == table.rows, case_name + " round trip rows")
+        }
+        csv_test_expect(csv_write(path.join(folder, "output.csv"), table) == "", case_name + " write")
+    }
+
+    local var empty CsvTableResult = csv_parse("")
+    csv_test_expect(empty.table == null and empty.error == "CSV needs a header row", "empty document")
+    local var headers string[] = ["name", "score"]
+    local var rows string[][] = [["Alice", "1200"]]
+    local var result CsvTableResult = csv_from_rows(headers, rows)
+    csv_test_expect(result.error == "", "construct table")
+    csv_test_expect(result.table.column_index("score") == 1, "second column")
+    csv_test_expect(result.table.column_index("Name") == -1, "case-sensitive columns")
+    headers[0] = "changed"
+    rows[0][0] = "changed"
+    rows.add(["Bob", "850"])
+    csv_test_expect(result.table.headers[0] == "name", "header copy")
+    csv_test_expect(result.table.rows[0][0] == "Alice", "deep row copy")
+    csv_test_expect(result.table.rows.length == 1, "outer row copy")
+
+    local var no_headers string[] = []
+    local var no_rows string[][] = []
+    local var invalid CsvTableResult = csv_from_rows(no_headers, no_rows)
+    csv_test_expect(invalid.table == null and invalid.error == "CSV needs at least one header", "no headers")
+    local var blank_headers string[] = ["name", "   "]
+    invalid = csv_from_rows(blank_headers, no_rows)
+    csv_test_expect(invalid.table == null and invalid.error == "CSV headers must not be empty or whitespace-only", "blank header")
+    local var duplicate_headers string[] = ["name", "name"]
+    invalid = csv_from_rows(duplicate_headers, no_rows)
+    csv_test_expect(invalid.table == null and invalid.error == "Duplicate CSV header: name", "duplicate headers")
+    local var bad_rows string[][] = [["Alice"]]
+    local var valid_headers string[] = ["name", "score"]
+    invalid = csv_from_rows(valid_headers, bad_rows)
+    csv_test_expect(invalid.table == null and invalid.error == "CSV data row 1 has 1 fields; expected 2", "short row")
+    bad_rows[0].add("1200")
+    bad_rows[0].add("extra")
+    invalid = csv_from_rows(valid_headers, bad_rows)
+    csv_test_expect(invalid.table == null and invalid.error == "CSV data row 1 has 3 fields; expected 2", "long row")
+    bad_rows[0].clear()
+    invalid = csv_from_rows(valid_headers, bad_rows)
+    csv_test_expect(invalid.table == null and invalid.error != "", "zero-field row")
+
+    local var parsed_invalid CsvTableResult = csv_parse("name,name")
+    csv_test_expect(parsed_invalid.table == null and parsed_invalid.error == "Duplicate CSV header: name", "parse duplicate headers")
+    parsed_invalid = csv_read("ragged.csv")
+    csv_test_expect(parsed_invalid.table == null and parsed_invalid.error == "CSV data row 2 has 1 fields; expected 2", "parse ragged rows")
+
+    local var null_text CsvTextResult = csv_stringify(null)
+    csv_test_expect(null_text.error == "CSV table must not be null", "null stringify")
+    csv_test_expect(csv_write("null.csv", null) == "CSV table must not be null", "null write")
+    csv_test_expect(not file.exists("null.csv"), "null write creates no file")
+
+    result.table.rows[0].clear()
+    local var invalid_text CsvTextResult = csv_stringify(result.table)
+    csv_test_expect(invalid_text.error != "" and invalid_text.text == "", "revalidate mutated table")
+    file.write("preserved.csv", "keep this")
+    csv_test_expect(csv_write("preserved.csv", result.table) != "", "invalid write rejected")
+    csv_test_expect(file.read("preserved.csv") == "keep this", "invalid write preserves file")
+    csv_test_expect(csv_write("absent.csv", result.table) != "", "invalid new write rejected")
+    csv_test_expect(not file.exists("absent.csv"), "invalid write creates no file")
+    print("csv tests passed")
+}
