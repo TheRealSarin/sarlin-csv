@@ -129,3 +129,9 @@ dependencies or network access are needed.
 The package's `source/` contains no `main` function, as required by Sarlin.
 Check or build it through a consumer project; running `sarlin check .` directly
 requires an executable entry point and will report that `main` is missing.
+
+## License
+
+Licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Florin Sarca.
