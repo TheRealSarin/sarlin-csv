@@ -13,7 +13,7 @@ func main() {
         if result.table == null {
             continue
         }
-        local var table CsvTable = result.table
+        local var table CsvTable = result.table.duplicate()
         csv_test_expect(table.headers == expected[0], case_name + " headers")
         expected.remove_at(0)
         csv_test_expect(table.rows == expected, case_name + " rows")

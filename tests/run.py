@@ -51,7 +51,7 @@ def stage_project(root, main):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--sarlin", default="sarlin", help="Sarlin 0.1.3+ executable")
+    parser.add_argument("--sarlin", default="sarlin", help="Sarlin 0.1.6+ executable")
     args = parser.parse_args()
     compiler = shutil.which(args.sarlin)
     if compiler is None:

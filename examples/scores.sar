@@ -10,7 +10,7 @@ func main() {
         return
     }
 
-    local var table CsvTable = result.table
+    local var table CsvTable = result.table.duplicate()
     local var score_column int64 = table.column_index("score")
     for row in table.rows {
         print(row[0] + ": " + row[score_column])

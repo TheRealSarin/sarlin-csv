@@ -48,7 +48,7 @@ class CsvTextResult {
 func csv_from_rows(headers string[], rows string[][]) CsvTableResult {
     local var table CsvTable = CsvTable.new(
         headers: headers.duplicate()
-        rows: rows.duplicate_deep()
+        rows: rows.duplicate()
     )
     local var error string = table.validate()
     if error != "" {
@@ -63,7 +63,7 @@ func csv_parse(text string) CsvTableResult {
         return CsvTableResult.new(error: "CSV needs a header row")
     }
     # CSV.parse owns these arrays, so no additional copy is needed here.
-    local var headers string[] = records[0]
+    local var headers string[] = records[0].duplicate()
     records.remove_at(0)
     local var table CsvTable = CsvTable.new(headers: headers rows: records)
     local var error string = table.validate()
@@ -90,10 +90,10 @@ func csv_stringify(table CsvTable) CsvTextResult {
         # Sarlin literals have no escapes; two empty records produce a line break.
         local var empty_records string[][] = [[""], [""]]
         local var line_break string = CSV.stringify(empty_records)
-        local var header_record string[][] = [table.headers]
+        local var header_record string[][] = [table.headers.duplicate()]
         local var text string = CSV.stringify(header_record)
         for row in table.rows {
-            local var record string[][] = [row]
+            local var record string[][] = [row.duplicate()]
             local var field string = CSV.stringify(record)
             if row[0] == "" {
                 field = JSON.stringify("")
@@ -103,9 +103,9 @@ func csv_stringify(table CsvTable) CsvTextResult {
         return CsvTextResult.new(text: text)
     }
     local var records string[][] = []
-    records.add(table.headers)
+    records.add(table.headers.duplicate())
     for row in table.rows {
-        records.add(row)
+        records.add(row.duplicate())
     }
     return CsvTextResult.new(text: CSV.stringify(records))
 }

@@ -1,6 +1,6 @@
 # csv
 
-CSV tables with named columns for Sarlin 0.1.3 and newer. No package dependencies.
+CSV tables with named columns for Sarlin 0.1.6 and newer. No package dependencies.
 
 Sarlin already provides `CSV.parse` and `CSV.stringify` for raw `string[][]` data.
 This package adds a header row, column lookup, rectangular-table validation and
@@ -84,16 +84,16 @@ in memory; it does not stream large files.
 
 ## Installation
 
-Once the `v0.1.0` tag is published, add the package directly from GitHub:
+Add the package directly from GitHub:
 
 ```sh
 sarlin add github.com/TheRealSarin/sarlin-csv
 ```
 
-After the Nook entry is merged and its index is updated, you can also use:
+or from the Nook:
 
 ```sh
-sarlin add csv@0.1.0
+sarlin add csv@0.1.2
 ```
 
 Both commands add the dependency to your project's `sarlin.project` and pin its
@@ -105,7 +105,7 @@ For local use before publication, copy `source/csv.sar` into your
 project's `source/` folder. Keep `examples/` and `tests/` outside your project's
 `source/` folder so their entry points are not compiled into your program.
 
-Run the tests from this directory with Python 3 and Sarlin 0.1.3+:
+Run the tests from this directory with Python 3 and Sarlin 0.1.6+:
 
 ```sh
 python3 tests/run.py --sarlin /path/to/sarlin
